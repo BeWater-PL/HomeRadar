@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- Auto-Refresh alle 30 Sekunden -->
+	<meta http-equiv="refresh" content="30">
+	<title>HomeRadar</title>
+	<style>
+		:root {
+			--bg: #0a0e14;
+			--panel: #10161f;
+			--border: #1c2733;
+			--text: #c8d3de;
+			--muted: #5f6f7e;
+			--green: #39ff14;
+			--green-dim: #1f7a12;
+			--cyan: #00e5ff;
+			--red: #ff3b3b;
+			--grey: #45525e;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--text);
+			font-family: "Consolas", "SF Mono", "Menlo", monospace;
+			font-size: 14px;
+			line-height: 1.5;
+			padding: 24px;
+		}
+
+		h1 {
+			font-size: 15px;
+			letter-spacing: 3px;
+			text-transform: uppercase;
+			color: var(--cyan);
+			margin: 0 0 4px 0;
+		}
+
+		.scan-info {
+			color: var(--muted);
+			font-size: 12px;
+			margin-bottom: 24px;
+		}
+
+		.status-hero {
+			border: 1px solid var(--border);
+			background: var(--panel);
+			border-radius: 6px;
+			padding: 28px 24px;
+			text-align: center;
+			margin-bottom: 24px;
+			box-shadow: 0 0 24px rgba(0, 229, 255, 0.05) inset;
+		}
+
+		.status-hero .count {
+			font-size: 56px;
+			font-weight: bold;
+			color: var(--green);
+			text-shadow: 0 0 12px rgba(57, 255, 20, 0.5);
+			line-height: 1;
+		}
+
+		.status-hero .label {
+			text-transform: uppercase;
+			letter-spacing: 4px;
+			color: var(--muted);
+			font-size: 12px;
+			margin-top: 10px;
+		}
+
+		section {
+			border: 1px solid var(--border);
+			background: var(--panel);
+			border-radius: 6px;
+			padding: 16px 20px;
+			margin-bottom: 20px;
+		}
+
+		section > h2 {
+			font-size: 12px;
+			letter-spacing: 3px;
+			text-transform: uppercase;
+			color: var(--cyan);
+			margin: 0 0 14px 0;
+			border-bottom: 1px solid var(--border);
+			padding-bottom: 8px;
+		}
+
+		.dot {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			margin-right: 10px;
+			vertical-align: middle;
+		}
+		.dot.on {
+			background: var(--green);
+			box-shadow: 0 0 8px var(--green);
+		}
+		.dot.off {
+			background: var(--grey);
+		}
+
+		.bewohner-row {
+			display: flex;
+			align-items: center;
+			padding: 8px 0;
+			border-bottom: 1px dashed var(--border);
+		}
+		.bewohner-row:last-child { border-bottom: none; }
+		.bewohner-row .name { flex: 1; }
+		.bewohner-row .meta { color: var(--muted); font-size: 12px; }
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+		th, td {
+			text-align: left;
+			padding: 8px 10px;
+			border-bottom: 1px solid var(--border);
+		}
+		th {
+			color: var(--muted);
+			font-weight: normal;
+			text-transform: uppercase;
+			font-size: 11px;
+			letter-spacing: 2px;
+		}
+		td.mac { color: var(--cyan); }
+		tr.offline td { color: var(--muted); }
+
+		.badge {
+			display: inline-block;
+			font-size: 11px;
+			letter-spacing: 1px;
+			text-transform: uppercase;
+			padding: 2px 8px;
+			border-radius: 3px;
+		}
+		.badge.on { color: var(--green); border: 1px solid var(--green-dim); }
+		.badge.off { color: var(--muted); border: 1px solid var(--grey); }
+
+		/* Klassifizierungs-Pills fuer den Geraetestatus. */
+		.pill {
+			display: inline-block;
+			font-size: 11px;
+			letter-spacing: 1px;
+			padding: 2px 8px;
+			border-radius: 3px;
+			border: 1px solid var(--border);
+			color: var(--muted);
+		}
+		.pill.BEWOHNER { color: var(--cyan); border-color: var(--cyan); }
+		.pill.INFRASTRUKTUR { color: var(--text); border-color: var(--grey); }
+		.pill.UNBEKANNT { color: var(--red); border-color: var(--red); }
+
+		/* Alarm-Sektion. */
+		section.alarme {
+			border-color: var(--red);
+			box-shadow: 0 0 20px rgba(255, 59, 59, 0.08) inset;
+		}
+		section.alarme > h2 { color: var(--red); border-bottom-color: var(--red); }
+
+		.alarm-badge {
+			display: inline-block;
+			min-width: 20px;
+			text-align: center;
+			background: var(--red);
+			color: #0a0e14;
+			font-weight: bold;
+			border-radius: 10px;
+			padding: 1px 8px;
+			margin-left: 8px;
+		}
+
+		.alarm-row {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			padding: 10px 0;
+			border-bottom: 1px dashed var(--border);
+		}
+		.alarm-row:last-child { border-bottom: none; }
+		.alarm-row .alarm-main { flex: 1; }
+		.alarm-row .alarm-mac { color: var(--red); }
+		.alarm-row .alarm-meta { color: var(--muted); font-size: 12px; }
+
+		button.quittieren {
+			background: transparent;
+			color: var(--green);
+			border: 1px solid var(--green-dim);
+			border-radius: 3px;
+			font-family: inherit;
+			font-size: 12px;
+			letter-spacing: 1px;
+			text-transform: uppercase;
+			padding: 6px 12px;
+			cursor: pointer;
+		}
+		button.quittieren:hover {
+			background: var(--green-dim);
+			color: var(--bg);
+		}
+
+		/* Inline-Formular zum Klassifizieren pro Geraetezeile. */
+		form.klassifizieren {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			align-items: center;
+		}
+		form.klassifizieren select,
+		form.klassifizieren input[type="text"] {
+			background: var(--bg);
+			color: var(--text);
+			border: 1px solid var(--border);
+			border-radius: 3px;
+			font-family: inherit;
+			font-size: 12px;
+			padding: 4px 6px;
+		}
+		form.klassifizieren input[type="text"] { width: 130px; }
+		form.klassifizieren select:focus,
+		form.klassifizieren input[type="text"]:focus {
+			outline: none;
+			border-color: var(--cyan);
+		}
+		button.speichern {
+			background: transparent;
+			color: var(--cyan);
+			border: 1px solid var(--cyan);
+			border-radius: 3px;
+			font-family: inherit;
+			font-size: 12px;
+			letter-spacing: 1px;
+			text-transform: uppercase;
+			padding: 5px 10px;
+			cursor: pointer;
+		}
+		button.speichern:hover {
+			background: var(--cyan);
+			color: var(--bg);
+		}
+
+		.empty { color: var(--muted); font-style: italic; padding: 8px 0; }
+	</style>
+</head>
+<body>
+	<h1>&#9678; HomeRadar</h1>
+	<div class="scan-info">
+		<span>Letzter Scan: </span>
+		<span th:if="${letzterScan != null}"
+			  th:text="${#temporals.format(letzterScan, 'dd.MM.yyyy HH:mm:ss')}">--</span>
+		<span th:if="${letzterScan == null}">noch kein Scan</span>
+		<span> &nbsp;&middot;&nbsp; Auto-Refresh alle 30s</span>
+	</div>
+
+	<div class="status-hero">
+		<div class="count" th:text="${anzahlAnwesend}">0</div>
+		<div class="label">Personen anwesend</div>
+	</div>
+
+	<section class="alarme" th:if="${anzahlOffeneAlarme > 0}">
+		<h2>Alarme<span class="alarm-badge" th:text="${anzahlOffeneAlarme}">0</span></h2>
+		<div th:each="a : ${offeneAlarme}" class="alarm-row">
+			<div class="alarm-main">
+				<div>
+					Unbekanntes Ger&auml;t:
+					<span class="alarm-mac" th:text="${a.mac()}">00:00:00:00:00:00</span>
+					<span th:if="${a.geraetName() != null}" th:text="'(' + ${a.geraetName()} + ')'"></span>
+				</div>
+				<div class="alarm-meta">
+					IP <span th:text="${a.ipAdresse() != null} ? ${a.ipAdresse()} : '—'">—</span>
+					&nbsp;&middot;&nbsp;
+					<span th:text="${a.zeitpunkt() != null}
+							? ${#temporals.format(a.zeitpunkt(), 'dd.MM.yyyy HH:mm:ss')} : '—'">—</span>
+				</div>
+			</div>
+			<form th:action="@{'/alarme/' + ${a.id()} + '/quittieren'}" method="post">
+				<button type="submit" class="quittieren">Quittieren</button>
+			</form>
+		</div>
+	</section>
+
+	<section>
+		<h2>Bewohner</h2>
+		<div th:if="${bewohner.isEmpty()}" class="empty">Keine Bewohner erfasst.</div>
+		<div th:each="p : ${bewohner}" class="bewohner-row">
+			<span class="dot" th:classappend="${p.anwesend()} ? 'on' : 'off'"></span>
+			<span class="name" th:text="${p.name()}">Name</span>
+			<span class="meta">
+				<span th:text="${p.anwesend()} ? 'anwesend' : 'abwesend'">status</span>
+				&nbsp;&middot;&nbsp;
+				<span th:text="${p.onlineGeraete()}">0</span> online-Ger&auml;te
+			</span>
+		</div>
+	</section>
+
+	<section>
+		<h2>Ger&auml;te (<span th:text="${gesamtGeraete}">0</span>)</h2>
+		<div th:if="${geraete.isEmpty()}" class="empty">Keine Ger&auml;te erfasst.</div>
+		<table th:unless="${geraete.isEmpty()}">
+			<thead>
+				<tr>
+					<th>MAC</th>
+					<th>Name</th>
+					<th>IP</th>
+					<th>Zuletzt gesehen</th>
+					<th>Person</th>
+					<th>Klasse</th>
+					<th>Status</th>
+					<th>Klassifizieren</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="g : ${geraete}" th:classappend="${g.online()} ? '' : 'offline'">
+					<td class="mac" th:text="${g.mac()}">00:00:00:00:00:00</td>
+					<td th:text="${g.anzeigeName()}">Unbekanntes Ger&auml;t</td>
+					<td th:text="${g.ipZuletzt() != null} ? ${g.ipZuletzt()} : '—'">—</td>
+					<td th:text="${g.zuletztGesehen() != null}
+							? ${#temporals.format(g.zuletztGesehen(), 'dd.MM. HH:mm:ss')} : '—'">—</td>
+					<td th:text="${g.personName() != null} ? ${g.personName()} : '—'">—</td>
+					<td>
+						<span class="pill" th:classappend="${g.status()}"
+							  th:text="${g.status()}">UNBEKANNT</span>
+					</td>
+					<td>
+						<span class="badge" th:classappend="${g.online()} ? 'on' : 'off'"
+							  th:text="${g.online()} ? 'online' : 'offline'">status</span>
+					</td>
+					<td>
+						<form class="klassifizieren" method="post"
+							  th:action="@{'/geraet/' + ${g.id()} + '/klassifizieren'}">
+							<select name="status">
+								<option th:each="s : ${statusWerte}" th:value="${s}"
+										th:text="${s}" th:selected="${s == g.status()}">STATUS</option>
+							</select>
+							<select name="personId">
+								<option value="" th:selected="${g.personId() == null}">keine</option>
+								<option th:each="p : ${personen}" th:value="${p.id()}"
+										th:text="${p.name()}" th:selected="${p.id() == g.personId()}">Person</option>
+							</select>
+							<input type="text" name="name" th:value="${g.name()}" placeholder="Ger&auml;tename">
+							<button type="submit" class="speichern">Speichern</button>
+						</form>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</section>
+</body>
+</html>
